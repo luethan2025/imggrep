@@ -1,4 +1,5 @@
 import argparse
+import os
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Simple command-line interface.")
@@ -15,6 +16,9 @@ def parse_args():
         help="Maximum distance between two images.",
     )
     args = parser.parse_args()
+
+    if not os.path.exists(args.input):
+        raise ValueError("`--input` value is not a file")
 
     if not args.input.endswith((".png", ".jpg", ".jpeg")):
         raise ValueError("`--input` value is not an image")
