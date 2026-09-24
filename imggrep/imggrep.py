@@ -10,6 +10,12 @@ def parse_args():
         help="Path to image.",
     )
     parser.add_argument(
+        "--target",
+        type="str",
+        require=True,
+        help="Path to target directory."
+    )
+    parser.add_argument(
         "--distance",
         type=float,
         default=10.,
@@ -20,6 +26,10 @@ def parse_args():
     input = Path(args.input)
     if not(input.exists() and input.is_file()):
         raise ValueError("`--input` value is not a file")
+
+    target = Path(args.target)
+    if not(target.exists() and target.is_dir()):
+        raise ValueError("`--target` value is not a directory")
 
     if not args.input.endswith((".png", ".jpg", ".jpeg")):
         raise ValueError("`--input` value is not an image")
