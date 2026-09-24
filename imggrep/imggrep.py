@@ -24,11 +24,11 @@ def parse_args():
     args = parser.parse_args()
 
     input = Path(args.input)
-    if not(input.exists() and input.is_file()):
+    if not (input.exists() and input.is_file()):
         raise ValueError("`--input` value is not a file")
 
     target = Path(args.target)
-    if not(target.exists() and target.is_dir()):
+    if not (target.exists() and target.is_dir()):
         raise ValueError("`--target` value is not a directory")
 
     if not args.input.endswith((".png", ".jpg", ".jpeg")):
