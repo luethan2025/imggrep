@@ -17,7 +17,8 @@ def parse_args():
     )
     args = parser.parse_args()
 
-    if not Path(args.input).is_file():
+    input = Path(args.input)
+    if not(input.exists() and input.is_file()):
         raise ValueError("`--input` value is not a file")
 
     if not args.input.endswith((".png", ".jpg", ".jpeg")):
