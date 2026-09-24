@@ -1,5 +1,5 @@
 import argparse
-import os
+from pathlib import Path
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Simple command-line interface.")
@@ -17,7 +17,7 @@ def parse_args():
     )
     args = parser.parse_args()
 
-    if not os.path.exists(args.input):
+    if not Path(args.input).is_file():
         raise ValueError("`--input` value is not a file")
 
     if not args.input.endswith((".png", ".jpg", ".jpeg")):
