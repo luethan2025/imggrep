@@ -8,10 +8,19 @@ def parse_args():
         require=True,
         help="Path to image.",
     )
+    parser.add_argument(
+        "--distance",
+        type=float,
+        default=10.,
+        help="Maximum distance between two images.",
+    )
     args = parser.parse_args()
 
     if not args.input.endswith((".png", ".jpg", ".jpeg")):
         raise ValueError("`--input` value is not an image")
+
+    if args.distance <= 0:
+        raise ValueError("`--distance` value must be greater than 0")
 
     return args
 
