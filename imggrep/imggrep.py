@@ -5,13 +5,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Simple command-line interface.")
     parser.add_argument(
         "--input",
-        type="str",
+        type=str,
         require=True,
         help="Path to image.",
     )
     parser.add_argument(
         "--target",
-        type="str",
+        type=str,
         require=True,
         help="Path to target directory."
     )
