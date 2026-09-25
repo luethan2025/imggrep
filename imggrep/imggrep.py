@@ -6,13 +6,13 @@ def parse_args():
     parser.add_argument(
         "--input",
         type=str,
-        require=True,
+        required=True,
         help="Path to image.",
     )
     parser.add_argument(
         "--target",
         type=str,
-        require=True,
+        required=True,
         help="Path to target directory."
     )
     parser.add_argument(
