@@ -1,6 +1,11 @@
 [project]
 name = "imggrep"
 version = "0.1.0"
+dependencies = [
+    "Pillow",
+    "imagehash",
+    "tqdm",
+]
 
 [project.scripts]
 imggrep = "imggrep.imggrep:main"
