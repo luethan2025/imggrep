@@ -10,15 +10,13 @@ from .os_utils import list_files
 def parse_args():
     parser = argparse.ArgumentParser(description="Simple command-line interface.")
     parser.add_argument(
-        "--input",
+        "input",
         type=Path,
-        required=True,
         help="Path to image.",
     )
     parser.add_argument(
-        "--target",
+        "target",
         type=Path,
-        required=True,
         help="Path to target directory."
     )
     parser.add_argument(
