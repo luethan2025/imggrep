@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument(
         "target",
         type=Path,
-        help="Path to target directory."
+        help="Path to target directory.",
     )
     parser.add_argument(
         "--distance",
