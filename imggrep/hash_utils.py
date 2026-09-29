@@ -1,29 +1,39 @@
-from typing import Any
-
-import imagehash
 import PIL
-from PIL import Image
+import imagehash
 
 from .embedder import Embedder
 
-def phash(img: PIL.Image.Image) -> imagehash.ImageHash:
-    hash_value = imagehash.phash(img)
-    return hash_value
-
 class pHashEmbedder(Embedder):
     def __init__(self) -> None:
-        self.reference_hash = None
+        self.reference_embeddings: imagehash.ImageHash | None = None
 
-    def embed(self, img: PIL.Image.Image) -> int:
-        image_embeddings = phash(img)
+    def embed(self, img: PIL.Image.Image) -> imagehash.ImageHash:
+        if not isinstance(img, PIL.Image.Image):
+            raise TypeError(
+                f"Expected PIL.Image.Image, got {type(img)}"
+            )
+
+        image_embeddings = imagehash.phash(img)
         return image_embeddings
 
-    def set_reference_embeddings(self, img: PIL.Image.Image) -> None:
+    def set_reference_embeddings(
+        self,
+        img: PIL.Image.Image,
+    ) -> None:
         self.reference_embeddings = self.embed(img)
 
-    def is_similiar_to_reference_embeddings(self, img: PIL.Image.Image, distance: int=10) -> bool:
+    def is_similar_to_reference_embeddings(
+        self,
+        img: PIL.Image.Image,
+        distance: int = 10,
+    ) -> bool:
         if self.reference_embeddings is None:
-            raise RuntimeError("Must call `set_reference_embeddings` before `is_similiar_to_reference_embeddings`")
+            raise RuntimeError(
+                "Must call `set_reference_embeddings` before "
+                "`is_similar_to_reference_embeddings`"
+            )
+
         image_embeddings = self.embed(img)
+
         result = abs(self.reference_embeddings - image_embeddings) < distance
         return result

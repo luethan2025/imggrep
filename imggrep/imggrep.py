@@ -4,14 +4,18 @@ from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
 
+from .argparse_utils import resolve_input
+from .clip_utils import CLIPEmbedder
 from .hash_utils import pHashEmbedder
 from .os_utils import list_files
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Simple command-line interface.")
+    parser = argparse.ArgumentParser(
+        description="Simple command-line interface."
+    )
     parser.add_argument(
         "input",
-        type=Path,
+        type=resolve_input,
         help="Path to image.",
     )
     parser.add_argument(
@@ -23,61 +27,67 @@ def parse_args():
         "--method",
         type=str,
         default="phash",
-        choices=["phash"],
-        help="Embedding method. Must be one of: `phash`",
+        choices=["phash", "clip"],
+        help="Embedding method. Must be one of: `phash`, `clip`",
     )
     parser.add_argument(
         "--distance",
         type=float,
-        default=10.,
+        default=None,
         help="Maximum distance between two images.",
     )
     args = parser.parse_args()
 
-    input = Path(args.input)
-    if not (input.exists() and input.is_file()):
-        raise ValueError("`--input` value is not a file")
-
     target = Path(args.target)
     if not (target.exists() and target.is_dir()):
         raise ValueError("`--target` value is not a directory")
-
-    if args.input.suffix.lower() not in (".png", ".jpg", ".jpeg"):
-        raise ValueError("`--input` value is not an image")
-
-    if args.distance <= 0:
-        raise ValueError("`--distance` value must be greater than 0")
 
     return args
 
 def main():
     args = parse_args()
 
-    max_distance = args.distance
     input = args.input
 
     match args.method:
         case "phash":
             embedder = pHashEmbedder()
+        case "clip":
+            embedder = CLIPEmbedder()
 
-    embedder.set_reference_embeddings(Image.open(input))
+    if isinstance(input, Path):
+        embedder.set_reference_embeddings(Image.open(input))
+    elif isinstance(input, str):
+        embedder.set_reference_embeddings(input)
+    else:
+        raise ValueError("--input value is neither a Path or string")
+
     paths = list_files(args.target)
 
     matches = []
     for target in tqdm(
         paths,
         desc="Searching",
-        bar_format="{desc}: |{bar}| {percentage:3.0f}% [{elapsed}]"
+        bar_format="{desc}: |{bar}| {percentage:3.0f}% [{elapsed}]",
     ):
-        if input.resolve() != target.resolve():
+        if isinstance(input, str) or input.resolve() != target.resolve():
             try:
                 target_image_embeddings = embedder.embed(Image.open(target))
-                is_similiar = embedder.is_similiar_to_reference_embeddings(
+                is_similar = embedder.is_similar_to_reference_embeddings(
                     target_image_embeddings,
-                    distance=max_distance
+                    **(
+                        {"distance": args.distance}
+                        if args.distance is not None
+                        else {}
+                    ),
                 )
-                if is_similiar:
-                    matches.append(target.resolve().relative_to(Path.cwd(), walk_up=True))
+                if is_similar:
+                    matches.append(
+                        target.resolve().relative_to(
+                            Path.cwd(),
+                            walk_up=True,
+                        )
+                    )
             except Exception as e:
                 pass
 

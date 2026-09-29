@@ -14,5 +14,5 @@ class Embedder(ABC):
         ...
 
     @abstractmethod
-    def is_similiar_to_reference_embeddings(self, img: PIL.Image.Image) -> bool:
+    def is_similar_to_reference_embeddings(self, img: PIL.Image.Image) -> bool:
         ...

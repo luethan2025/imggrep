@@ -5,6 +5,8 @@ dependencies = [
     "Pillow",
     "imagehash",
     "tqdm",
+    "torch",
+    "clip @ git+https://github.com/openai/CLIP.git",
 ]
 
 [project.scripts]
