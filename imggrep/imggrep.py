@@ -4,7 +4,7 @@ from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
 
-from .hash_utils import phash
+from .hash_utils import pHashEmbedder
 from .os_utils import list_files
 
 def parse_args():
@@ -18,6 +18,13 @@ def parse_args():
         "target",
         type=Path,
         help="Path to target directory.",
+    )
+    parser.add_argument(
+        "--method",
+        type=str,
+        default="phash",
+        choices=["phash"],
+        help="Embedding method. Must be one of: `phash`",
     )
     parser.add_argument(
         "--distance",
@@ -48,7 +55,12 @@ def main():
 
     max_distance = args.distance
     input = args.input
-    input_image_hash = phash(Image.open(input))
+
+    match args.method:
+        case "phash":
+            embedder = pHashEmbedder()
+
+    embedder.set_reference_embeddings(Image.open(input))
     paths = list_files(args.target)
 
     matches = []
@@ -59,9 +71,12 @@ def main():
     ):
         if input.resolve() != target.resolve():
             try:
-                target_image_hash = phash(Image.open(target))
-                hash_difference = abs(target_image_hash - input_image_hash)
-                if hash_difference <= max_distance:
+                target_image_embeddings = embedder.embed(Image.open(target))
+                is_similiar = embedder.is_similiar_to_reference_embeddings(
+                    target_image_embeddings,
+                    distance=max_distance
+                )
+                if is_similiar:
                     matches.append(target.resolve().relative_to(Path.cwd(), walk_up=True))
             except Exception as e:
                 pass
