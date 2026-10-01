@@ -7,6 +7,8 @@ dependencies = [
     "tqdm",
     "torch",
     "transformers",
+    "sentencepiece",
+    "protobuf",
 ]
 
 [project.scripts]

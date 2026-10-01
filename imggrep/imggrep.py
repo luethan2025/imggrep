@@ -8,6 +8,7 @@ from .argparse_utils import resolve_input
 from .clip_utils import CLIPEmbedder
 from .hash_utils import pHashEmbedder
 from .os_utils import list_files
+from .siglip_utils import SigLIPEmbedder
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -27,8 +28,8 @@ def parse_args():
         "--method",
         type=str,
         default="phash",
-        choices=["phash", "clip"],
-        help="Embedding method. Must be one of: `phash`, `clip`",
+        choices=["phash", "clip", "siglip"],
+        help="Embedding method. Must be one of: `phash`, `clip`, `siglip`",
     )
     parser.add_argument(
         "--distance",
@@ -54,6 +55,8 @@ def main():
             embedder = pHashEmbedder()
         case "clip":
             embedder = CLIPEmbedder()
+        case "siglip":
+            embedder = SigLIPEmbedder()
 
     if isinstance(input, Path):
         embedder.set_reference_embeddings(Image.open(input))
@@ -72,9 +75,8 @@ def main():
     ):
         if isinstance(input, str) or input.resolve() != target.resolve():
             try:
-                target_image_embeddings = embedder.embed(Image.open(target))
                 is_similar = embedder.is_similar_to_reference_embeddings(
-                    target_image_embeddings,
+                    Image.open(target),
                     **(
                         {"distance": args.distance}
                         if args.distance is not None
