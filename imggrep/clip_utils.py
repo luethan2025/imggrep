@@ -2,16 +2,20 @@ from .embedder import Embedder
 from .torch_utils import get_device
 
 import torch
-import clip
 from PIL import Image
+from transformers import CLIPModel, CLIPProcessor
 
 class CLIPEmbedder(Embedder):
     def __init__(self, fp16: bool = False) -> None:
         self.device = get_device()
 
-        self.model, self.preprocess = clip.load(
-            "ViT-B/32",
-            device=self.device,
+        self.model = CLIPModel.from_pretrained(
+            "openai/clip-vit-base-patch32",
+        )
+        self.model.to(self.device)
+        self.model.eval()
+        self.processor = CLIPProcessor.from_pretrained(
+            "openai/clip-vit-base-patch32",
         )
 
         self.reference_embeddings: torch.Tensor | None = None
@@ -19,18 +23,27 @@ class CLIPEmbedder(Embedder):
     @torch.no_grad()
     def embed(self, value: Image.Image | str) -> torch.Tensor:
         if isinstance(value, Image.Image):
-            image = self.preprocess(value).unsqueeze(0).to(self.device)
-            embeddings = self.model.encode_image(image)
+            image = self.processor(
+                images=value,
+                return_tensors="pt",
+            )["pixel_values"].to(self.device)
+            embeddings = self.model.get_image_features(pixel_values=image)
 
         elif isinstance(value, str):
-            text = clip.tokenize([value]).to(self.device)
-            embeddings = self.model.encode_text(text)
+            text = self.processor(
+                text=[value],
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+            ).to(self.device)
+            embeddings = self.model.get_text_features(**text)
 
         else:
             raise TypeError(
                 f"Expected PIL.Image.Image or str, got {type(value)}"
             )
 
+        embeddings = getattr(embeddings, "pooler_output", embeddings)
         embeddings = embeddings / embeddings.norm(dim=-1, keepdim=True)
 
         return embeddings

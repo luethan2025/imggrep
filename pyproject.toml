@@ -6,7 +6,7 @@ dependencies = [
     "imagehash",
     "tqdm",
     "torch",
-    "clip @ git+https://github.com/openai/CLIP.git",
+    "transformers",
 ]
 
 [project.scripts]
