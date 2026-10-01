@@ -20,7 +20,7 @@ class CLIPEmbedder(Embedder):
 
         self.reference_embeddings: torch.Tensor | None = None
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def embed(self, value: Image.Image | str) -> torch.Tensor:
         if isinstance(value, Image.Image):
             image = self.processor(
@@ -54,7 +54,7 @@ class CLIPEmbedder(Embedder):
     ) -> None:
         self.reference_embeddings = self.embed(value)
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def is_similar_to_reference_embeddings(
         self,
         value: Image.Image | str,
