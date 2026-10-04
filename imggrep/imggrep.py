@@ -25,11 +25,10 @@ def parse_args():
         help="Path to target directory.",
     )
     parser.add_argument(
-        "--method",
+        "--model_id",
         type=str,
-        default="phash",
-        choices=["phash", "clip", "siglip"],
-        help="Embedding method. Must be one of: `phash`, `clip`, `siglip`",
+        choices=["clip", "google/siglip-base-patch16-224"],
+        help="Embedding model. Must be one of: `clip`, `google/siglip-base-patch16-224`",
     )
     parser.add_argument(
         "--distance",
@@ -50,13 +49,13 @@ def main():
 
     input = args.input
 
-    match args.method:
-        case "phash":
-            embedder = pHashEmbedder()
-        case "clip":
-            embedder = CLIPEmbedder()
-        case "siglip":
-            embedder = SigLIPEmbedder()
+    embedder = pHashEmbedder()
+    if args.model_id is not None:
+        match args.model_id:
+            case "openai/clip-vit-base-patch32":
+                embedder = CLIPEmbedder(model_id=args.model_id)
+            case "google/siglip-base-patch16-224":
+                embedder = SigLIPEmbedder(model_id=args.model_id)
 
     if isinstance(input, Path):
         embedder.set_reference_embeddings(Image.open(input))

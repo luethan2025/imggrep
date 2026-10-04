@@ -7,16 +7,16 @@ from transformers import SiglipModel, SiglipProcessor
 
 
 class SigLIPEmbedder(Embedder):
-    def __init__(self, fp16: bool = False) -> None:
+    def __init__(self, model_id: str = "google/siglip-base-patch16-224", fp16: bool = False) -> None:
         self.device = get_device()
 
         self.model = SiglipModel.from_pretrained(
-            "google/siglip-base-patch16-224",
+            model_id,
         )
         self.model.to(self.device)
         self.model.eval()
         self.processor = SiglipProcessor.from_pretrained(
-            "google/siglip-base-patch16-224",
+            model_id,
         )
 
         self.reference_embeddings: torch.Tensor | None = None

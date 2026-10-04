@@ -6,16 +6,16 @@ from PIL import Image
 from transformers import CLIPModel, CLIPProcessor
 
 class CLIPEmbedder(Embedder):
-    def __init__(self, fp16: bool = False) -> None:
+    def __init__(self, model_id: str = "openai/clip-vit-base-patch32", fp16: bool = False) -> None:
         self.device = get_device()
 
         self.model = CLIPModel.from_pretrained(
-            "openai/clip-vit-base-patch32",
+            model_id,
         )
         self.model.to(self.device)
         self.model.eval()
         self.processor = CLIPProcessor.from_pretrained(
-            "openai/clip-vit-base-patch32",
+            model_id,
         )
 
         self.reference_embeddings: torch.Tensor | None = None
