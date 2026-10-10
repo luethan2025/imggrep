@@ -26,8 +26,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model_id",
         type=str,
-        choices=["clip", "google/siglip-base-patch16-224"],
-        help="Embedding model. Must be one of: `clip`, `google/siglip-base-patch16-224`",
+        choices=["openai/clip-vit-base-patch32", "google/siglip-base-patch16-224"],
+        help="Embedding model. Must be one of: `openai/clip-vit-base-patch32`, `google/siglip-base-patch16-224`",
     )
     parser.add_argument(
         "--distance",
