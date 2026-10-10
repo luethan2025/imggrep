@@ -1,7 +1,7 @@
 import PIL
 import imagehash
 
-from .embedder import Embedder
+from .base import Embedder
 
 class pHashEmbedder(Embedder):
     def __init__(self) -> None:
@@ -34,5 +34,4 @@ class pHashEmbedder(Embedder):
             )
 
         image_embeddings = self.embed(img)
-
         return abs(self.reference_embeddings - image_embeddings) < distance

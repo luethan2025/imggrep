@@ -1,20 +1,21 @@
-from .embedder import Embedder
-from .torch_utils import get_device
+from .base import Embedder
+from .utils import get_device
 
 import torch
 from PIL import Image
-from transformers import CLIPModel, CLIPProcessor
+from transformers import SiglipModel, SiglipProcessor
 
-class CLIPEmbedder(Embedder):
-    def __init__(self, model_id: str = "openai/clip-vit-base-patch32", fp16: bool = False) -> None:
+
+class SigLIPEmbedder(Embedder):
+    def __init__(self, model_id: str = "google/siglip-base-patch16-224", fp16: bool = False) -> None:
         self.device = get_device()
 
-        self.model = CLIPModel.from_pretrained(
+        self.model = SiglipModel.from_pretrained(
             model_id,
         )
         self.model.to(self.device)
         self.model.eval()
-        self.processor = CLIPProcessor.from_pretrained(
+        self.processor = SiglipProcessor.from_pretrained(
             model_id,
         )
 
@@ -33,7 +34,7 @@ class CLIPEmbedder(Embedder):
             text = self.processor(
                 text=[value],
                 return_tensors="pt",
-                padding=True,
+                padding="max_length",
                 truncation=True,
             ).to(self.device)
             embeddings = self.model.get_text_features(**text)
@@ -72,5 +73,4 @@ class CLIPEmbedder(Embedder):
             self.reference_embeddings,
             embeddings,
         ).item()
-
         return (1.0 - similarity) < distance

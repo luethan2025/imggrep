@@ -71,7 +71,9 @@ def parse_config_args() -> argparse.Namespace:
         action="store_true",
         help="Select the default configuration.",
     )
-    return parser.parse_args(sys.argv[2:])
+    args = parser.parse_args(sys.argv[2:])
+
+    return args
 
 
 def run_config() -> None:

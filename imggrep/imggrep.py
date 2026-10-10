@@ -1,7 +1,7 @@
 import sys
 
-from .config_utils import run_config
-from .search_utils import run_search
+from .cli.config import run_config
+from .cli.search import run_search
 
 
 def main() -> None:

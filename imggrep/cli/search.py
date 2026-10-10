@@ -4,12 +4,18 @@ from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
 
-from .argparse_utils import resolve_input
-from .clip_utils import CLIPEmbedder
-from .config_utils import load_config
-from .hash_utils import pHashEmbedder
-from .os_utils import list_files
-from .siglip_utils import SigLIPEmbedder
+from ..embeddings.clip import CLIPEmbedder
+from ..embeddings.phash import pHashEmbedder
+from ..embeddings.siglip import SigLIPEmbedder
+from ..files import list_files
+from .config import load_config
+
+
+def resolve_input(value: str) -> Path | str:
+    path = Path(value)
+    if path.is_file():
+        return path
+    return value
 
 
 def parse_args() -> argparse.Namespace:
