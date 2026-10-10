@@ -1,5 +1,13 @@
 from pathlib import Path
 
+
+def resolve_input(value: str) -> Path | str:
+    path = Path(value)
+    if path.is_file():
+        return path
+    return value
+
+
 def list_files(
     dir: str,
     ext: list[str] = [".png", ".jpg", ".jpeg"],

@@ -7,15 +7,8 @@ from tqdm import tqdm
 from ..embeddings.clip import CLIPEmbedder
 from ..embeddings.phash import pHashEmbedder
 from ..embeddings.siglip import SigLIPEmbedder
-from ..files import list_files
 from .config import load_config
-
-
-def resolve_input(value: str) -> Path | str:
-    path = Path(value)
-    if path.is_file():
-        return path
-    return value
+from .utils import list_files, resolve_input
 
 
 def parse_args() -> argparse.Namespace:
