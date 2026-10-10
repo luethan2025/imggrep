@@ -35,5 +35,4 @@ class pHashEmbedder(Embedder):
 
         image_embeddings = self.embed(img)
 
-        result = abs(self.reference_embeddings - image_embeddings) < distance
-        return result
+        return abs(self.reference_embeddings - image_embeddings) < distance
