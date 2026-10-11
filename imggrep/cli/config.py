@@ -4,12 +4,7 @@ import os
 import sys
 from pathlib import Path
 
-
-DEFAULT_CONFIG: dict[str, str | float | None] = {
-    "model_id": None,
-    "distance": 1,
-}
-
+from .default_configs import DEFAULT_PHASH_CONFIG
 
 def config_path() -> Path:
     config_home = os.environ.get("XDG_CONFIG_HOME")
@@ -52,10 +47,10 @@ def write_default_config() -> dict[str, str | float | None]:
     path = config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(DEFAULT_CONFIG, indent=2) + "\n",
+        json.dumps(DEFAULT_PHASH_CONFIG, indent=2) + "\n",
         encoding="utf-8",
     )
-    return DEFAULT_CONFIG.copy()
+    return DEFAULT_PHASH_CONFIG.copy()
 
 
 def parse_config_args() -> argparse.Namespace:
