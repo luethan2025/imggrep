@@ -1,6 +1,7 @@
 DEFAULT_PHASH_CONFIG: dict[str, str | float | int | None] = {
     "model_id": None,
     "distance": 1,
+    "num_threads": 4,
 }
 
 DEFAULT_CLIP_CONFIG: dict[str, str | float | int | None] = {

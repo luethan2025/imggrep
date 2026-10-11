@@ -1,3 +1,6 @@
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
+
 import imagehash
 import PIL
 
@@ -5,7 +8,15 @@ from .base import Embedder
 
 
 class pHashEmbedder(Embedder):
-    def __init__(self) -> None:
+    def __init__(self, num_threads: int = 4) -> None:
+        if (
+            isinstance(num_threads, bool)
+            or not isinstance(num_threads, int)
+            or num_threads < 1
+        ):
+            raise ValueError("`num_threads` must be a positive integer.")
+
+        self.num_threads = num_threads
         self.reference_embeddings: imagehash.ImageHash | None = None
 
     def embed(self, img: PIL.Image.Image) -> imagehash.ImageHash:
@@ -41,6 +52,9 @@ class pHashEmbedder(Embedder):
         images: list[PIL.Image.Image],
         distance: float = 10,
     ) -> list[bool]:
-        return [
-            self.is_similar_to_reference_embeddings(image, distance) for image in images
-        ]
+        is_similar = partial(
+            self.is_similar_to_reference_embeddings,
+            distance=distance,
+        )
+        with ThreadPoolExecutor(max_workers=self.num_threads) as executor:
+            return list(executor.map(is_similar, images))

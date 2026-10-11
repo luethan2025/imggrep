@@ -62,6 +62,16 @@ def load_config() -> dict[str, str | float | int | None]:
             f"Unable to interpret batch_size. Expected a positive integer, received {type(batch_size).__name__}."
         )
 
+    num_threads = config.get("num_threads")
+    if "num_threads" in config and (
+        isinstance(num_threads, bool)
+        or not isinstance(num_threads, int)
+        or num_threads < 1
+    ):
+        raise ValueError(
+            f"Unable to interpret num_threads. Expected a positive integer, received {type(num_threads).__name__}."
+        )
+
     return config
 
 

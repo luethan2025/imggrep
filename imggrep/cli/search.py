@@ -53,9 +53,18 @@ def run_search() -> None:
 
     input = args.input
 
-    embedder = pHashEmbedder()
     model_id = args.model_id if args.model_id is not None else config.get("model_id")
-    if model_id is not None:
+    if model_id is None:
+        configured_num_threads = config.get("num_threads", 4)
+        if (
+            isinstance(configured_num_threads, bool)
+            or not isinstance(configured_num_threads, int)
+            or configured_num_threads < 1
+        ):
+            raise ValueError("`num_threads` must be a positive integer.")
+        num_threads = configured_num_threads
+        embedder = pHashEmbedder(num_threads=num_threads)
+    else:
         match model_id:
             case "openai/clip-vit-base-patch32":
                 embedder = CLIPEmbedder(model_id=model_id)
@@ -72,7 +81,7 @@ def run_search() -> None:
         raise TypeError("`--input` is neither a Path or string")
 
     paths = list_files(args.target)
-    batch_size = config.get("batch_size", 16) if model_id is not None else 1
+    batch_size = config.get("batch_size", 16) if model_id is not None else num_threads
     matches = []
     batches = (
         paths[index : index + batch_size] for index in range(0, len(paths), batch_size)
