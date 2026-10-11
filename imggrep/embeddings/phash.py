@@ -35,3 +35,12 @@ class pHashEmbedder(Embedder):
 
         image_embeddings = self.embed(img)
         return abs(self.reference_embeddings - image_embeddings) < distance
+
+    def are_similar_to_reference_embeddings(
+        self,
+        images: list[PIL.Image.Image],
+        distance: float = 10,
+    ) -> list[bool]:
+        return [
+            self.is_similar_to_reference_embeddings(image, distance) for image in images
+        ]

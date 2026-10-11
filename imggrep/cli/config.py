@@ -18,7 +18,7 @@ def config_path() -> Path:
     return Path.home() / ".config" / "imggrep" / "config.json"
 
 
-def load_config() -> dict[str, str | float | None]:
+def load_config() -> dict[str, str | float | int | None]:
     path = config_path()
     try:
         config = json.loads(path.read_text(encoding="utf-8"))
@@ -52,12 +52,22 @@ def load_config() -> dict[str, str | float | None]:
             f"Unable to interpret distance. Expected a number, received {type(distance).__name__}."
         )
 
+    batch_size = config.get("batch_size")
+    if "batch_size" in config and (
+        isinstance(batch_size, bool)
+        or not isinstance(batch_size, int)
+        or batch_size < 1
+    ):
+        raise ValueError(
+            f"Unable to interpret batch_size. Expected a positive integer, received {type(batch_size).__name__}."
+        )
+
     return config
 
 
 def write_config(
-    config: dict[str, str | float | None],
-) -> dict[str, str | float | None]:
+    config: dict[str, str | float | int | None],
+) -> dict[str, str | float | int | None]:
     path = config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -67,7 +77,7 @@ def write_config(
     return config.copy()
 
 
-def write_default_config() -> dict[str, str | float | None]:
+def write_default_config() -> dict[str, str | float | int | None]:
     return write_config(DEFAULT_PHASH_CONFIG)
 
 

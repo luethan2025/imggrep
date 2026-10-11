@@ -13,3 +13,10 @@ class Embedder(ABC):
 
     @abstractmethod
     def is_similar_to_reference_embeddings(self, img: PIL.Image.Image) -> bool: ...
+
+    @abstractmethod
+    def are_similar_to_reference_embeddings(
+        self,
+        images: list[PIL.Image.Image],
+        distance: float,
+    ) -> list[bool]: ...

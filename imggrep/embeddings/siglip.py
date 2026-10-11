@@ -26,11 +26,7 @@ class SigLIPEmbedder(Embedder):
     @torch.inference_mode()
     def embed(self, value: Image.Image | str) -> torch.Tensor:
         if isinstance(value, Image.Image):
-            image = self.processor(
-                images=value,
-                return_tensors="pt",
-            )["pixel_values"].to(self.device)
-            embeddings = self.model.get_image_features(pixel_values=image)
+            return self._embed_images([value])
 
         elif isinstance(value, str):
             text = self.processor(
@@ -50,6 +46,16 @@ class SigLIPEmbedder(Embedder):
         embeddings = embeddings / embeddings.norm(dim=-1, keepdim=True)
 
         return embeddings
+
+    @torch.inference_mode()
+    def _embed_images(self, images: list[Image.Image]) -> torch.Tensor:
+        image_batch = self.processor(
+            images=images,
+            return_tensors="pt",
+        )["pixel_values"].to(self.device)
+        embeddings = self.model.get_image_features(pixel_values=image_batch)
+        embeddings = getattr(embeddings, "pooler_output", embeddings)
+        return embeddings / embeddings.norm(dim=-1, keepdim=True)
 
     def set_reference_embeddings(
         self,
@@ -75,3 +81,21 @@ class SigLIPEmbedder(Embedder):
             embeddings,
         ).item()
         return (1.0 - similarity) < distance
+
+    @torch.inference_mode()
+    def are_similar_to_reference_embeddings(
+        self,
+        images: list[Image.Image],
+        distance: float,
+    ) -> list[bool]:
+        if self.reference_embeddings is None:
+            raise RuntimeError(
+                "Reference embeddings have not been set. Call `set_reference_embeddings` before calling `are_similar_to_reference_embeddings`."
+            )
+
+        embeddings = self._embed_images(images)
+        similarities = torch.cosine_similarity(
+            self.reference_embeddings,
+            embeddings,
+        )
+        return [(1.0 - similarity) < distance for similarity in similarities.tolist()]

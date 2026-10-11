@@ -63,21 +63,31 @@ def run_search() -> None:
                 embedder = SigLIPEmbedder(model_id=model_id)
 
     if isinstance(input, Path):
-        embedder.set_reference_embeddings(Image.open(input))
+        with Image.open(input) as image:
+            image.load()
+            embedder.set_reference_embeddings(image.copy())
     elif isinstance(input, str):
         embedder.set_reference_embeddings(input)
     else:
         raise TypeError("`--input` is neither a Path or string")
 
     paths = list_files(args.target)
-
+    batch_size = config.get("batch_size", 16) if model_id is not None else 1
     matches = []
-    for target in tqdm(
-        paths,
+    batches = (
+        paths[index : index + batch_size] for index in range(0, len(paths), batch_size)
+    )
+    for batch in tqdm(
+        batches,
+        total=(len(paths) + batch_size - 1) // batch_size,
         desc="Searching",
         bar_format="{desc}: |{bar}| {percentage:3.0f}% [{elapsed}]",
     ):
-        if isinstance(input, str) or input.resolve() != target.resolve():
+        images = []
+        image_paths = []
+        for target in batch:
+            if isinstance(input, Path) and input.resolve() == target.resolve():
+                continue
             try:
                 with Image.open(target) as image:
                     image.load()
@@ -85,21 +95,22 @@ def run_search() -> None:
             except OSError as error:
                 logger.warning("Skipping unreadable image %s: %s", target, error)
                 continue
+            images.append(target_image)
+            image_paths.append(target)
 
-            is_similar = embedder.is_similar_to_reference_embeddings(
-                target_image,
-                **(
-                    {
-                        "distance": (
-                            args.distance
-                            if args.distance is not None
-                            else config["distance"]
-                        )
-                    }
-                    if args.distance is not None or "distance" in config
-                    else {}
-                ),
-            )
+        if not images:
+            continue
+
+        distance = (
+            args.distance
+            if args.distance is not None
+            else config.get("distance", 10 if model_id is None else 0.1)
+        )
+        similarities = embedder.are_similar_to_reference_embeddings(
+            images,
+            distance,
+        )
+        for target, is_similar in zip(image_paths, similarities, strict=True):
             if is_similar:
                 matches.append(
                     target.resolve().relative_to(
