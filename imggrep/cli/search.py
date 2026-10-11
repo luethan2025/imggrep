@@ -29,8 +29,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model_id",
         type=str,
-        choices=["openai/clip-vit-base-patch32", "google/siglip-base-patch16-224"],
-        help="Embedding model. Must be one of: `openai/clip-vit-base-patch32`, `google/siglip-base-patch16-224`",
+        help="Embedding model. Must be a OpenAI CLIP model or Google SigLIP model.",
     )
     parser.add_argument(
         "--distance",
@@ -64,12 +63,14 @@ def run_search() -> None:
             raise ValueError("`num_threads` must be a positive integer.")
         num_threads = configured_num_threads
         embedder = pHashEmbedder(num_threads=num_threads)
+    elif isinstance(model_id, str) and model_id.startswith("openai/clip-"):
+        embedder = CLIPEmbedder(model_id=model_id)
+    elif isinstance(model_id, str) and model_id.startswith("google/siglip-"):
+        embedder = SigLIPEmbedder(model_id=model_id)
     else:
-        match model_id:
-            case "openai/clip-vit-base-patch32":
-                embedder = CLIPEmbedder(model_id=model_id)
-            case "google/siglip-base-patch16-224":
-                embedder = SigLIPEmbedder(model_id=model_id)
+        raise ValueError(
+            f"Unsupported model id: {model_id!r}. Must be a OpenAI CLIP model or Google SigLIP model."
+        )
 
     if isinstance(input, Path):
         with Image.open(input) as image:

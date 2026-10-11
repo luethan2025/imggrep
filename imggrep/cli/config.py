@@ -35,11 +35,10 @@ def load_config() -> dict[str, str | float | int | None]:
     model_id = config.get("model_id")
     if model_id is not None and (
         not isinstance(model_id, str)
-        or model_id
-        not in {"openai/clip-vit-base-patch32", "google/siglip-base-patch16-224"}
+        or not model_id.startswith(("openai/clip-", "google/siglip-"))
     ):
         raise ValueError(
-            f"Unsupported model id: {model_id!r}. Must be one of: `openai/clip-vit-base-patch32`, `google/siglip-base-patch16-224`."
+            f"Unsupported model id: {model_id!r}. Must start with `openai/clip-` or `google/siglip-`."
         )
 
     distance = config.get("distance")
