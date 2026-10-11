@@ -13,3 +13,15 @@ dependencies = [
 
 [project.scripts]
 imggrep = "imggrep.imggrep:main"
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

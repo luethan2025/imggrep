@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .default_configs import DEFAULT_PHASH_CONFIG
 
+
 def config_path() -> Path:
     config_home = os.environ.get("XDG_CONFIG_HOME")
     if config_home:
@@ -23,14 +24,19 @@ def load_config() -> dict[str, str | float | None]:
         raise ValueError("Unable to decode configuration file.") from error
 
     if not isinstance(config, dict):
-        raise ValueError(f"Unable to decode configuration file. Expected a JSON object, received {type(config).__name__}")
+        raise TypeError(
+            f"Unable to decode configuration file. Expected a JSON object, received {type(config).__name__}"
+        )
 
     model_id = config.get("model_id")
     if model_id is not None and (
         not isinstance(model_id, str)
-        or model_id not in {"openai/clip-vit-base-patch32", "google/siglip-base-patch16-224"}
+        or model_id
+        not in {"openai/clip-vit-base-patch32", "google/siglip-base-patch16-224"}
     ):
-        raise ValueError(f"Unsupported model id: {model_id!r}. Must be one of: `openai/clip-vit-base-patch32`, `google/siglip-base-patch16-224`.")
+        raise ValueError(
+            f"Unsupported model id: {model_id!r}. Must be one of: `openai/clip-vit-base-patch32`, `google/siglip-base-patch16-224`."
+        )
 
     distance = config.get("distance")
     if "distance" in config and (
@@ -38,7 +44,9 @@ def load_config() -> dict[str, str | float | None]:
         or isinstance(distance, bool)
         or not isinstance(distance, (int, float))
     ):
-        raise ValueError(f"Unable to interpret distance. Expected a number, received {type(distance).__name__}.")
+        raise ValueError(
+            f"Unable to interpret distance. Expected a number, received {type(distance).__name__}."
+        )
 
     return config
 

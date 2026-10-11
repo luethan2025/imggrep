@@ -1,12 +1,15 @@
-from .base import Embedder
-from .utils import get_device
-
 import torch
 from PIL import Image
 from transformers import CLIPModel, CLIPProcessor
 
+from .base import Embedder
+from .utils import get_device
+
+
 class CLIPEmbedder(Embedder):
-    def __init__(self, model_id: str = "openai/clip-vit-base-patch32", fp16: bool = False) -> None:
+    def __init__(
+        self, model_id: str = "openai/clip-vit-base-patch32", fp16: bool = False
+    ) -> None:
         self.device = get_device()
 
         self.model = CLIPModel.from_pretrained(
@@ -39,7 +42,9 @@ class CLIPEmbedder(Embedder):
             embeddings = self.model.get_text_features(**text)
 
         else:
-            raise TypeError(f"Unable to embed image. Expected PIL.Image.Image or str, got {type(value).__name__}")
+            raise TypeError(
+                f"Unable to embed image. Expected PIL.Image.Image or str, got {type(value).__name__}"
+            )
 
         embeddings = getattr(embeddings, "pooler_output", embeddings)
         embeddings = embeddings / embeddings.norm(dim=-1, keepdim=True)
@@ -59,7 +64,9 @@ class CLIPEmbedder(Embedder):
         distance: float = 0.1,
     ) -> bool:
         if self.reference_embeddings is None:
-            raise RuntimeError("Reference embeddings have not been set. Call `set_reference_embeddings` before calling `is_similar_to_reference_embeddings`.")
+            raise RuntimeError(
+                "Reference embeddings have not been set. Call `set_reference_embeddings` before calling `is_similar_to_reference_embeddings`."
+            )
 
         embeddings = self.embed(value)
 
