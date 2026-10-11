@@ -67,7 +67,7 @@ def run_search() -> None:
     elif isinstance(input, str):
         embedder.set_reference_embeddings(input)
     else:
-        raise TypeError("--input value is neither a Path or string")
+        raise TypeError("`--input` is neither a Path or string")
 
     paths = list_files(args.target)
 
