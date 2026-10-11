@@ -20,17 +20,17 @@ def load_config() -> dict[str, str | float | None]:
     except FileNotFoundError:
         return write_default_config()
     except json.JSONDecodeError as error:
-        raise ValueError(f"Invalid JSON in {path}: {error}") from error
+        raise ValueError("Unable to decode configuration file.") from error
 
     if not isinstance(config, dict):
-        raise ValueError(f"Configuration in {path} must be a JSON object")
+        raise ValueError(f"Unable to decode configuration file. Expected a JSON object, received {type(config).__name__}")
 
     model_id = config.get("model_id")
     if model_id is not None and (
         not isinstance(model_id, str)
-        or model_id not in {"clip", "google/siglip-base-patch16-224"}
+        or model_id not in {"openai/clip-vit-base-patch32", "google/siglip-base-patch16-224"}
     ):
-        raise ValueError(f"Invalid model_id in {path}: {model_id!r}")
+        raise ValueError(f"Unsupported model id: {model_id!r}. Must be one of: `openai/clip-vit-base-patch32`, `google/siglip-base-patch16-224`.")
 
     distance = config.get("distance")
     if "distance" in config and (
@@ -38,7 +38,7 @@ def load_config() -> dict[str, str | float | None]:
         or isinstance(distance, bool)
         or not isinstance(distance, (int, float))
     ):
-        raise ValueError(f"Invalid distance in {path}: expected a number")
+        raise ValueError(f"Unable to interpret distance. Expected a number, received {type(distance).__name__}.")
 
     return config
 
