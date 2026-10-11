@@ -38,7 +38,7 @@ def load_config() -> dict[str, str | float | int | None]:
         or not model_id.startswith(("openai/clip-", "google/siglip-"))
     ):
         raise ValueError(
-            f"Unsupported model id: {model_id!r}. Must start with `openai/clip-` or `google/siglip-`."
+            f"Unsupported model id: {model_id!r}. Must be a OpenAI CLIP model or Google SigLIP model."
         )
 
     distance = config.get("distance")
