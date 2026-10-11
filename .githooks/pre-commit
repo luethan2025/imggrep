@@ -1,0 +1,4 @@
+#!/bin/sh
+set -e
+
+ruff format . && ruff check --fix .
