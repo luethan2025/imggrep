@@ -4,7 +4,11 @@ import os
 import sys
 from pathlib import Path
 
-from .default_configs import DEFAULT_PHASH_CONFIG
+from .default_configs import (
+    DEFAULT_CLIP_CONFIG,
+    DEFAULT_PHASH_CONFIG,
+    DEFAULT_SIGLIP_CONFIG,
+)
 
 
 def config_path() -> Path:
@@ -51,14 +55,20 @@ def load_config() -> dict[str, str | float | None]:
     return config
 
 
-def write_default_config() -> dict[str, str | float | None]:
+def write_config(
+    config: dict[str, str | float | None],
+) -> dict[str, str | float | None]:
     path = config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(DEFAULT_PHASH_CONFIG, indent=2) + "\n",
+        json.dumps(config, indent=2) + "\n",
         encoding="utf-8",
     )
-    return DEFAULT_PHASH_CONFIG.copy()
+    return config.copy()
+
+
+def write_default_config() -> dict[str, str | float | None]:
+    return write_config(DEFAULT_PHASH_CONFIG)
 
 
 def parse_config_args() -> argparse.Namespace:
@@ -67,7 +77,13 @@ def parse_config_args() -> argparse.Namespace:
         "parameter",
         nargs="?",
         choices=["default"],
-        help="Write the default configuration.",
+        help="Write a default configuration preset.",
+    )
+    parser.add_argument(
+        "preset",
+        nargs="?",
+        choices=["phash", "clip", "siglip"],
+        help="Configuration preset to write (defaults to phash).",
     )
     parser.add_argument(
         "--default",
@@ -81,6 +97,12 @@ def parse_config_args() -> argparse.Namespace:
 
 def run_config() -> None:
     args = parse_config_args()
-    if args.parameter == "default" or args.default:
-        write_default_config()
+    if args.parameter is not None or args.default:
+        preset = args.preset or "phash"
+        configs = {
+            "phash": DEFAULT_PHASH_CONFIG,
+            "clip": DEFAULT_CLIP_CONFIG,
+            "siglip": DEFAULT_SIGLIP_CONFIG,
+        }
+        write_config(configs[preset])
         print(f"imggrep configuration saved at {config_path()}")
