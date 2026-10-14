@@ -1,4 +1,4 @@
 #!/bin/sh
 set -e
 
-ruff format . && ruff check --fix .
+ruff check --fix --line-length 88 imggrep/ && ruff format --line-length 88 imggrep/
