@@ -229,7 +229,7 @@ def run_config() -> None:
 
             default_dtype = "fp16"
 
-            choice = input("dtype: ").strip()
+            choice = input("torch.dtype: ").strip()
 
             dtype = choice if choice else default_dtype
             if dtype not in ("no", "fp16", "bf16"):
