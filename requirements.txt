@@ -1,3 +1,7 @@
 imagehash
-pillow
+p[illow
+protobuf
+sentencepiece
+torch
 tqdm
+transformers
