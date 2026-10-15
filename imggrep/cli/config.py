@@ -73,8 +73,7 @@ def load_config() -> dict[str, str | float | int | None]:
 
     dtype = config.get("dtype")
     if "dtype" in config and (
-        not isinstance(dtype, str)
-        or dtype not in ("no", "fp16", "bf16") 
+        not isinstance(dtype, str) or dtype not in ("no", "fp16", "bf16")
     ):
         raise ValueError(
             f"Unable to interpret dtype. Expected one of the following: 'no', 'fp16', 'bf16', received {type(num_threads).__name__}."
