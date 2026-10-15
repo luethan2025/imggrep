@@ -1,9 +1,11 @@
 import argparse
 import logging
+import os
 from pathlib import Path
 
 import torch
 from PIL import Image
+from sortedcontainers import SortedKeyList
 from tqdm import tqdm
 
 from ..embeddings.clip import CLIPEmbedder
@@ -31,6 +33,11 @@ def parse_args() -> argparse.Namespace:
         "--model_id",
         type=str,
         help="Embedding model. Must be a OpenAI CLIP model or Google SigLIP model.",
+    )
+    parser.add_argument(
+        "--top_k",
+        type=int,
+        help="Number of elements to return.",
     )
     parser.add_argument(
         "--distance",
@@ -97,10 +104,13 @@ def run_search() -> None:
 
     paths = list_files(args.target)
     batch_size = config.get("batch_size", 16) if model_id is not None else num_threads
-    matches = []
+
+    matches = SortedKeyList(key=lambda t: t[1])
+
     batches = (
         paths[index : index + batch_size] for index in range(0, len(paths), batch_size)
     )
+
     for batch in tqdm(
         batches,
         total=(len(paths) + batch_size - 1) // batch_size,
@@ -109,9 +119,11 @@ def run_search() -> None:
     ):
         images = []
         image_paths = []
+
         for target in batch:
             if isinstance(input, Path) and input.resolve() == target.resolve():
                 continue
+
             try:
                 with Image.open(target) as image:
                     image.load()
@@ -119,6 +131,7 @@ def run_search() -> None:
             except OSError as error:
                 logger.warning("Skipping unreadable image %s: %s", target, error)
                 continue
+
             images.append(target_image)
             image_paths.append(target)
 
@@ -130,15 +143,24 @@ def run_search() -> None:
             if args.distance is not None
             else config.get("distance", 10 if model_id is None else 0.1)
         )
+
         similarities = embedder.are_similar_to_reference_embeddings(
             images,
             distance,
         )
-        for target, is_similar in zip(image_paths, similarities, strict=True):
-            if is_similar:
-                matches.append(
-                    target.resolve().relative_to(
-                        Path.cwd(),
-                        walk_up=True,
-                    )
+
+        for index, similarity_distance in similarities:
+            target = image_paths[index]
+
+            matches.add(
+                (
+                    Path(os.path.relpath(target.resolve(), Path.cwd())),
+                    similarity_distance,
                 )
+            )
+
+    top_k = args.top_k if args.top_k is not None else config.get("top_k", 10)
+    if matches:
+        print("***** Matches Found *****")
+        for path, _ in matches[:top_k]:
+            print(path)

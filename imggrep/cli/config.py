@@ -79,6 +79,14 @@ def load_config() -> dict[str, str | float | int | None]:
             f"Unable to interpret dtype. Expected one of the following: 'no', 'fp16', 'bf16', received {type(dtype).__name__}."
         )
 
+    top_k = config.get("top_k")
+    if "top_k" in config and (
+        isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 1
+    ):
+        raise ValueError(
+            f"Unable to interpret top_k. Expected a positive integer, received {type(top_k).__name__}."
+        )
+
     return config
 
 
@@ -155,6 +163,21 @@ def run_config() -> None:
 
         print(f"Using model_id: {model_id}")
         config["model_id"] = model_id
+
+        print()
+
+        print("Configure Top-K settings:")
+        default_top_k = 10
+
+        choice = input("Top-K: ").strip()
+
+        if choice:
+            top_k = int(choice)
+        else:
+            top_k = default_top_k
+
+        print(f"Using Top-K: {top_k}")
+        config["top_k"] = top_k
 
         print()
 

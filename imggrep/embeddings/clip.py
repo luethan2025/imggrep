@@ -79,14 +79,14 @@ class CLIPEmbedder(Embedder):
         self.reference_embeddings = self.embed(value)
 
     @torch.inference_mode()
-    def is_similar_to_reference_embeddings(
+    def distance_to_reference_embeddings(
         self,
         value: Image.Image | str,
-        distance: float = 0.1,
-    ) -> bool:
+    ) -> float:
         if self.reference_embeddings is None:
             raise RuntimeError(
-                "Reference embeddings have not been set. Call `set_reference_embeddings` before calling `is_similar_to_reference_embeddings`."
+                "Reference embeddings have not been set. Call "
+                "`set_reference_embeddings` first."
             )
 
         embeddings = self.embed(value)
@@ -94,23 +94,35 @@ class CLIPEmbedder(Embedder):
         similarity = torch.cosine_similarity(
             self.reference_embeddings,
             embeddings,
+            dim=-1,
         ).item()
-        return (1.0 - similarity) < distance
+
+        return 1.0 - similarity
 
     @torch.inference_mode()
     def are_similar_to_reference_embeddings(
         self,
         images: list[Image.Image],
-        distance: float,
-    ) -> list[bool]:
+        distance: float = 0.1,
+    ) -> list[tuple[int, float]]:
         if self.reference_embeddings is None:
             raise RuntimeError(
-                "Reference embeddings have not been set. Call `set_reference_embeddings` before calling `are_similar_to_reference_embeddings`."
+                "Reference embeddings have not been set. Call "
+                "`set_reference_embeddings` first."
             )
 
         embeddings = self._embed_images(images)
+
         similarities = torch.cosine_similarity(
             self.reference_embeddings,
             embeddings,
+            dim=-1,
         )
-        return [(1.0 - similarity) < distance for similarity in similarities.tolist()]
+
+        distances = 1.0 - similarities
+
+        return [
+            (index, dist)
+            for index, dist in enumerate(distances.tolist())
+            if dist < distance
+        ]

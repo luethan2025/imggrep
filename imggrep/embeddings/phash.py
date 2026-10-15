@@ -1,5 +1,4 @@
 from concurrent.futures import ThreadPoolExecutor
-from functools import partial
 
 import imagehash
 import PIL
@@ -34,10 +33,9 @@ class pHashEmbedder(Embedder):
     ) -> None:
         self.reference_embeddings = self.embed(img)
 
-    def is_similar_to_reference_embeddings(
+    def distance_to_reference_embeddings(
         self,
         img: PIL.Image.Image,
-        distance: int = 10,
     ) -> bool:
         if self.reference_embeddings is None:
             raise RuntimeError(
@@ -45,16 +43,24 @@ class pHashEmbedder(Embedder):
             )
 
         image_embeddings = self.embed(img)
-        return abs(self.reference_embeddings - image_embeddings) < distance
+        return abs(self.reference_embeddings - image_embeddings)
 
     def are_similar_to_reference_embeddings(
         self,
         images: list[PIL.Image.Image],
-        distance: float = 10,
-    ) -> list[bool]:
-        is_similar = partial(
-            self.is_similar_to_reference_embeddings,
-            distance=distance,
-        )
+        distance: int = 10,
+    ) -> list[tuple[int, int]]:
+        def calculate_distance(
+            item: tuple[int, PIL.Image.Image],
+        ) -> tuple[int, int] | None:
+            index, img = item
+            hash_distance = self.distance_to_reference_embeddings(img)
+
+            if hash_distance <= distance:
+                return index, hash_distance
+
+            return None
+
         with ThreadPoolExecutor(max_workers=self.num_threads) as executor:
-            return list(executor.map(is_similar, images))
+            results = executor.map(calculate_distance, enumerate(images))
+            return [result for result in results if result is not None]

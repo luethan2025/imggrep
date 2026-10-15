@@ -79,14 +79,15 @@ class SigLIPEmbedder(Embedder):
         self.reference_embeddings = self.embed(value)
 
     @torch.inference_mode()
-    def is_similar_to_reference_embeddings(
+    def distance_to_reference_embeddings(
         self,
         value: Image.Image | str,
         distance: float = 0.1,
     ) -> bool:
         if self.reference_embeddings is None:
             raise RuntimeError(
-                "Reference embeddings have not been set. Call `set_reference_embeddings` before calling `is_similar_to_reference_embeddings`."
+                "Reference embeddings have not been set. Call "
+                "`set_reference_embeddings` first."
             )
 
         embeddings = self.embed(value)
@@ -94,23 +95,29 @@ class SigLIPEmbedder(Embedder):
         similarity = torch.cosine_similarity(
             self.reference_embeddings,
             embeddings,
+            dim=-1,
         ).item()
+
         return (1.0 - similarity) < distance
 
     @torch.inference_mode()
     def are_similar_to_reference_embeddings(
         self,
         images: list[Image.Image],
-        distance: float,
+        distance: float = 0.1,
     ) -> list[bool]:
         if self.reference_embeddings is None:
             raise RuntimeError(
-                "Reference embeddings have not been set. Call `set_reference_embeddings` before calling `are_similar_to_reference_embeddings`."
+                "Reference embeddings have not been set. Call "
+                "`set_reference_embeddings` first."
             )
 
         embeddings = self._embed_images(images)
+
         similarities = torch.cosine_similarity(
             self.reference_embeddings,
             embeddings,
+            dim=-1,
         )
+
         return [(1.0 - similarity) < distance for similarity in similarities.tolist()]

@@ -2,6 +2,7 @@ imagehash
 pillow
 protobuf
 sentencepiece
+sortedcontainers
 torch
 tqdm
 transformers
