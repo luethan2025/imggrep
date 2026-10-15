@@ -1,5 +1,5 @@
 imagehash
-p[illow
+pillow
 protobuf
 sentencepiece
 torch
