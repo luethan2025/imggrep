@@ -13,6 +13,6 @@ def list_files(
     ext: list[str] | None = None,
 ) -> list[Path]:
     if ext is None:
-        ext = [".png", ".jpg", ".jpeg"]
+        ext = (".png", ".jpg", ".jpeg")
     files = [f for f in Path(dir).rglob("*") if f.is_file() and f.suffix.lower() in ext]
     return files
