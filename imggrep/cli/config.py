@@ -131,5 +131,89 @@ def run_config() -> None:
             "clip": DEFAULT_CLIP_CONFIG,
             "siglip": DEFAULT_SIGLIP_CONFIG,
         }
-        write_config(configs[preset])
-        print(f"imggrep configuration saved at {config_path()}")
+        config = configs[preset]
+
+    else:
+        config = {}
+
+        print("Configure model settings:")
+        print("Please select a model:")
+        print("  1. None")
+        print("  2. openai/clip-vit-base-patch32")
+        print("  3. google/siglip-base-patch16-224")
+
+        choice = input("Your choice: ").strip() or "1"
+
+        if choice == "1":
+            model_id = None
+        elif choice == "2":
+            model_id = "openai/clip-vit-base-patch32"
+        elif choice == "3":
+            model_id = "google/siglip-base-patch16-224"
+        else:
+            raise ValueError("Invalid model selection")
+
+        print(f"Using model_id: {model_id}")
+        config["model_id"] = model_id
+
+        print()
+
+        print("Configure distance settings:")
+        default_distance = 1 if model_id is None else 0.1
+
+        choice = input("Distance: ").strip()
+
+        if choice:
+            distance = float(choice)
+            if distance.is_integer():
+                distance = int(distance)
+        else:
+            distance = default_distance
+
+        print(f"Using distance: {distance}")
+        config["distance"] = distance
+
+        print()
+
+        if model_id is None:
+            default_num_threads = 4
+
+            choice = input("Number of threads: ").strip()
+
+            num_threads = int(choice) if choice else default_num_threads
+            if num_threads < 1:
+                raise ValueError("Number of threads must be a positive integer.")
+
+            print(f"Using number of threads: {num_threads}")
+            config["num_threads"] = num_threads
+        else:
+            print("Configure batch size settings:")
+
+            default_batch_size = 16
+
+            choice = input("Batch size: ").strip()
+
+            batch_size = int(choice) if choice else default_batch_size
+            if batch_size < 1:
+                raise ValueError("Batch size must be a positive integer.")
+
+            print(f"Using batch size: {batch_size}")
+            config["batch_size"] = batch_size
+
+            print()
+
+            print("Configure dtype settings:")
+
+            default_dtype = "fp16"
+
+            choice = input("dtype: ").strip()
+
+            dtype = choice if choice else default_dtype
+            if dtype not in ("no", "fp16", "bf16"):
+                raise ValueError("dtype must be one of: 'no', 'fp16', 'bf16'.")
+
+            print(f"Using dtype: {dtype}")
+            config["dtype"] = dtype
+
+    write_config(config)
+    print(f"imggrep configuration saved at {config_path()}")
