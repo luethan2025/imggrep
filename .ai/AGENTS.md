@@ -11,5 +11,6 @@ This is the codebase for **imggrep**, a cli tool for recursively searching direc
 ### Code Formatting
 ```bash
 # Format Python code with Ruff
+conda activate imggrep
 ruff check --fix --line-length 88 imggrep/ && ruff format --line-length 88 imggrep/
 ```

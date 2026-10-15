@@ -8,9 +8,12 @@ from .utils import get_device
 
 class CLIPEmbedder(Embedder):
     def __init__(
-        self, model_id: str = "openai/clip-vit-base-patch32", fp16: bool = False
+        self,
+        model_id: str = "openai/clip-vit-base-patch32",
+        dtype: torch.dtype | None = None,
     ) -> None:
         self.device = get_device()
+        self.dtype = dtype
 
         self.model = CLIPModel.from_pretrained(
             model_id,
@@ -35,7 +38,12 @@ class CLIPEmbedder(Embedder):
                 padding=True,
                 truncation=True,
             ).to(self.device)
-            embeddings = self.model.get_text_features(**text)
+            with torch.autocast(
+                device_type=self.device.type,
+                dtype=self.dtype,
+                enabled=self.dtype is not None,
+            ):
+                embeddings = self.model.get_text_features(**text)
 
         else:
             raise TypeError(
@@ -43,6 +51,7 @@ class CLIPEmbedder(Embedder):
             )
 
         embeddings = getattr(embeddings, "pooler_output", embeddings)
+        embeddings = embeddings.float()
         embeddings = embeddings / embeddings.norm(dim=-1, keepdim=True)
 
         return embeddings
@@ -53,8 +62,14 @@ class CLIPEmbedder(Embedder):
             images=images,
             return_tensors="pt",
         )["pixel_values"].to(self.device)
-        embeddings = self.model.get_image_features(pixel_values=image_batch)
+        with torch.autocast(
+            device_type=self.device.type,
+            dtype=self.dtype,
+            enabled=self.dtype is not None,
+        ):
+            embeddings = self.model.get_image_features(pixel_values=image_batch)
         embeddings = getattr(embeddings, "pooler_output", embeddings)
+        embeddings = embeddings.float()
         return embeddings / embeddings.norm(dim=-1, keepdim=True)
 
     def set_reference_embeddings(

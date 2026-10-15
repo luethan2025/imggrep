@@ -2,6 +2,7 @@ import argparse
 import logging
 from pathlib import Path
 
+import torch
 from PIL import Image
 from tqdm import tqdm
 
@@ -37,6 +38,15 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Maximum distance between two images.",
     )
+    parser.add_argument(
+        "--mixed_precision",
+        type=str,
+        default=None,
+        choices=["no", "fp16", "bf16"],
+        help=(
+            "Whether to use mixed precision. Choose between fp16 and bf16 (bfloat16)."
+        ),
+    )
     args = parser.parse_args()
 
     target = Path(args.target)
@@ -53,6 +63,10 @@ def run_search() -> None:
     input = args.input
 
     model_id = args.model_id if args.model_id is not None else config.get("model_id")
+    dtype = {
+        "fp16": torch.float16,
+        "bf16": torch.bfloat16,
+    }.get(args.mixed_precision)
     if model_id is None:
         configured_num_threads = config.get("num_threads", 4)
         if (
@@ -64,9 +78,9 @@ def run_search() -> None:
         num_threads = configured_num_threads
         embedder = pHashEmbedder(num_threads=num_threads)
     elif isinstance(model_id, str) and model_id.startswith("openai/clip-"):
-        embedder = CLIPEmbedder(model_id=model_id)
+        embedder = CLIPEmbedder(model_id=model_id, dtype=dtype)
     elif isinstance(model_id, str) and model_id.startswith("google/siglip-"):
-        embedder = SigLIPEmbedder(model_id=model_id)
+        embedder = SigLIPEmbedder(model_id=model_id, dtype=dtype)
     else:
         raise ValueError(
             f"Unsupported model id: {model_id!r}. Must be a OpenAI CLIP model or Google SigLIP model."
