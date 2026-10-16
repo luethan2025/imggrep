@@ -1,5 +1,5 @@
+import PIL
 import torch
-from PIL import Image
 from transformers import SiglipModel, SiglipProcessor
 
 from .base import Embedder
@@ -27,8 +27,8 @@ class SigLIPEmbedder(Embedder):
         self.reference_embeddings: torch.Tensor | None = None
 
     @torch.inference_mode()
-    def embed(self, value: Image.Image | str) -> torch.Tensor:
-        if isinstance(value, Image.Image):
+    def embed(self, value: PIL.Image.Image | str) -> torch.Tensor:
+        if isinstance(value, PIL.Image.Image):
             return self._embed_images([value])
 
         elif isinstance(value, str):
@@ -57,7 +57,7 @@ class SigLIPEmbedder(Embedder):
         return embeddings
 
     @torch.inference_mode()
-    def _embed_images(self, images: list[Image.Image]) -> torch.Tensor:
+    def _embed_images(self, images: list[PIL.Image.Image]) -> torch.Tensor:
         image_batch = self.processor(
             images=images,
             return_tensors="pt",
@@ -74,14 +74,14 @@ class SigLIPEmbedder(Embedder):
 
     def set_reference_embeddings(
         self,
-        value: Image.Image | str,
+        value: PIL.Image.Image | str,
     ) -> None:
         self.reference_embeddings = self.embed(value)
 
     @torch.inference_mode()
     def distance_to_reference_embeddings(
         self,
-        value: Image.Image | str,
+        value: PIL.Image.Image | str,
         distance: float = 0.1,
     ) -> bool:
         if self.reference_embeddings is None:
@@ -103,7 +103,7 @@ class SigLIPEmbedder(Embedder):
     @torch.inference_mode()
     def are_similar_to_reference_embeddings(
         self,
-        images: list[Image.Image],
+        images: list[PIL.Image.Image],
         distance: float = 0.1,
     ) -> list[bool]:
         if self.reference_embeddings is None:
