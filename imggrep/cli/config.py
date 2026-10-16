@@ -10,16 +10,49 @@ from .default_configs import (
     DEFAULT_SIGLIP_CONFIG,
 )
 
+CONFIG_PRESETS = {
+    "phash": DEFAULT_PHASH_CONFIG,
+    "clip": DEFAULT_CLIP_CONFIG,
+    "siglip": DEFAULT_SIGLIP_CONFIG,
+}
+
+SUPPORTED_MODELS = {
+    "1": None,
+    "2": "openai/clip-vit-base-patch32",
+    "3": "google/siglip-base-patch16-224",
+}
+
+SUPPORTED_DTYPES = ("no", "fp16", "bf16")
+
+CONFIG_PARAMETERS = (
+    "model_id",
+    "distance",
+    "batch_size",
+    "num_threads",
+    "top_k",
+    "dtype",
+)
+
+CONFIG_DEFAULTS = {
+    "top_k": 10,
+    "num_threads": 4,
+    "batch_size": 16,
+    "dtype": "fp16",
+}
+
 
 def config_path() -> Path:
     config_home = os.environ.get("XDG_CONFIG_HOME")
+
     if config_home:
         return Path(config_home) / "imggrep" / "config.json"
+
     return Path.home() / ".config" / "imggrep" / "config.json"
 
 
 def load_config() -> dict[str, str | float | int | None]:
     path = config_path()
+
     try:
         config = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
@@ -29,63 +62,68 @@ def load_config() -> dict[str, str | float | int | None]:
 
     if not isinstance(config, dict):
         raise TypeError(
-            f"Unable to decode configuration file. Expected a JSON object, received {type(config).__name__}"
+            "Unable to decode configuration file. "
+            f"Expected a JSON object, received {type(config).__name__}."
         )
 
     model_id = config.get("model_id")
-    if model_id is not None and (
-        not isinstance(model_id, str)
-        or not model_id.startswith(("openai/clip-", "google/siglip-"))
-    ):
-        raise ValueError(
-            f"Unsupported model id: {model_id!r}. Must be a OpenAI CLIP model or Google SigLIP model."
-        )
+
+    if model_id is not None:
+        if not isinstance(model_id, str):
+            raise TypeError(
+                "Unable to interpret model_id. Expected a string or None, "
+                f"received {type(model_id).__name__}."
+            )
+
+        if not model_id.startswith(("openai/clip-", "google/siglip-")):
+            raise ValueError(
+                f"Unsupported model id: {model_id!r}. "
+                "Must be an OpenAI CLIP model or Google SigLIP model."
+            )
 
     distance = config.get("distance")
+
     if "distance" in config and (
         distance is None
         or isinstance(distance, bool)
         or not isinstance(distance, (int, float))
     ):
-        raise ValueError(
-            f"Unable to interpret distance. Expected a number, received {type(distance).__name__}."
+        raise TypeError(
+            "Unable to interpret distance. Expected a number, "
+            f"received {type(distance).__name__}."
         )
 
-    batch_size = config.get("batch_size")
-    if "batch_size" in config and (
-        isinstance(batch_size, bool)
-        or not isinstance(batch_size, int)
-        or batch_size < 1
-    ):
-        raise ValueError(
-            f"Unable to interpret batch_size. Expected a positive integer, received {type(batch_size).__name__}."
-        )
+    for parameter in ("batch_size", "num_threads", "top_k"):
+        value = config.get(parameter)
 
-    num_threads = config.get("num_threads")
-    if "num_threads" in config and (
-        isinstance(num_threads, bool)
-        or not isinstance(num_threads, int)
-        or num_threads < 1
-    ):
-        raise ValueError(
-            f"Unable to interpret num_threads. Expected a positive integer, received {type(num_threads).__name__}."
-        )
+        if parameter not in config:
+            continue
+
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise TypeError(
+                f"Unable to interpret {parameter}. Expected an integer, "
+                f"received {type(value).__name__}."
+            )
+
+        if value < 1:
+            raise ValueError(
+                f"Unable to interpret {parameter}. Expected a positive integer."
+            )
 
     dtype = config.get("dtype")
-    if "dtype" in config and (
-        not isinstance(dtype, str) or dtype not in ("no", "fp16", "bf16")
-    ):
-        raise ValueError(
-            f"Unable to interpret dtype. Expected one of the following: 'no', 'fp16', 'bf16', received {type(dtype).__name__}."
-        )
 
-    top_k = config.get("top_k")
-    if "top_k" in config and (
-        isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 1
-    ):
-        raise ValueError(
-            f"Unable to interpret top_k. Expected a positive integer, received {type(top_k).__name__}."
-        )
+    if "dtype" in config:
+        if not isinstance(dtype, str):
+            raise TypeError(
+                "Unable to interpret dtype. Expected a string, "
+                f"received {type(dtype).__name__}."
+            )
+
+        if dtype not in SUPPORTED_DTYPES:
+            raise ValueError(
+                "Unable to interpret dtype. Expected one of "
+                f"{SUPPORTED_DTYPES}, received {dtype!r}."
+            )
 
     return config
 
@@ -95,148 +133,235 @@ def write_config(
 ) -> dict[str, str | float | int | None]:
     path = config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
+
     path.write_text(
         json.dumps(config, indent=2) + "\n",
         encoding="utf-8",
     )
+
     return config.copy()
 
 
-def write_default_config() -> dict[str, str | float | int | None]:
-    return write_config(DEFAULT_PHASH_CONFIG)
+def write_default_config(
+    preset: str = "phash",
+) -> dict[str, str | float | int | None]:
+    try:
+        config = CONFIG_PRESETS[preset]
+    except KeyError:
+        raise ValueError(f"Unknown configuration preset: {preset}") from None
+
+    return write_config(dict(config))
 
 
-def parse_config_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog="imggrep config")
-    parser.add_argument(
-        "parameter",
-        nargs="?",
-        choices=["default"],
-        help="Write a default configuration preset.",
+def prompt_integer(
+    prompt: str,
+    current: int,
+    parameter: str,
+) -> int:
+    choice = input(f"{prompt}: ").strip()
+
+    try:
+        value = int(choice) if choice else current
+    except ValueError as error:
+        raise ValueError(f"{parameter} must be an integer.") from error
+
+    if value < 1:
+        raise ValueError(f"{parameter} must be a positive integer.")
+
+    return value
+
+
+def prompt_distance(current: float) -> int | float:
+    choice = input(f"Distance: ").strip()
+
+    try:
+        value = float(choice) if choice else current
+    except ValueError as error:
+        raise ValueError("distance must be a number.") from error
+
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+
+    return value
+
+
+def prompt_model_id(current_model: str | None) -> str | None:
+    print("Please select a model:")
+    print("  1. None")
+    print("  2. openai/clip-vit-base-patch32")
+    print("  3. google/siglip-base-patch16-224")
+
+    current_choice = next(
+        (key for key, model in SUPPORTED_MODELS.items() if model == current_model),
+        "1",
     )
-    parser.add_argument(
-        "preset",
-        nargs="?",
-        choices=["phash", "clip", "siglip"],
-        help="Configuration preset to write (defaults to phash).",
-    )
-    parser.add_argument(
-        "--default",
-        action="store_true",
-        help="Select the default configuration.",
-    )
-    args = parser.parse_args(sys.argv[2:])
 
-    return args
+    choice = input(f"Your choice: ").strip()
+    choice = choice or current_choice
+
+    if choice not in SUPPORTED_MODELS:
+        raise ValueError("Invalid model selection.")
+
+    return SUPPORTED_MODELS[choice]
 
 
-def run_config() -> None:
-    args = parse_config_args()
-    if args.parameter is not None or args.default:
-        preset = args.preset or "phash"
-        configs = {
-            "phash": DEFAULT_PHASH_CONFIG,
-            "clip": DEFAULT_CLIP_CONFIG,
-            "siglip": DEFAULT_SIGLIP_CONFIG,
-        }
-        config = configs[preset]
+def prompt_dtype(current: str = "fp16") -> str:
+    choice = input(f"torch.dtype: ").strip()
+    value = choice or current
 
-    else:
-        config = {}
+    if value not in SUPPORTED_DTYPES:
+        raise ValueError("dtype must be one of: 'no', 'fp16', 'bf16'.")
 
-        print("Configure model settings:")
-        print("Please select a model:")
-        print("  1. None")
-        print("  2. openai/clip-vit-base-patch32")
-        print("  3. google/siglip-base-patch16-224")
+    return value
 
-        choice = input("Your choice: ").strip() or "1"
 
-        if choice == "1":
-            model_id = None
-        elif choice == "2":
-            model_id = "openai/clip-vit-base-patch32"
-        elif choice == "3":
-            model_id = "google/siglip-base-patch16-224"
-        else:
-            raise ValueError("Invalid model selection")
+def configure_parameter(parameter: str) -> None:
+    config = load_config()
 
-        print(f"Using model_id: {model_id}")
+    if parameter == "model_id":
+        model_id = prompt_model_id(config.get("model_id"))
         config["model_id"] = model_id
 
-        print()
-
-        print("Configure Top-K settings:")
-        default_top_k = 10
-
-        choice = input("Top-K: ").strip()
-
-        if choice:
-            top_k = int(choice)
-        else:
-            top_k = default_top_k
-
-        print(f"Using Top-K: {top_k}")
-        config["top_k"] = top_k
-
-        print()
-
-        print("Configure distance settings:")
-        default_distance = 1 if model_id is None else 0.1
-
-        choice = input("Distance: ").strip()
-
-        if choice:
-            distance = float(choice)
-            if distance.is_integer():
-                distance = int(distance)
-        else:
-            distance = default_distance
-
-        print(f"Using distance: {distance}")
-        config["distance"] = distance
-
-        print()
-
         if model_id is None:
-            default_num_threads = 4
-
-            choice = input("Number of threads: ").strip()
-
-            num_threads = int(choice) if choice else default_num_threads
-            if num_threads < 1:
-                raise ValueError("Number of threads must be a positive integer.")
-
-            print(f"Using number of threads: {num_threads}")
-            config["num_threads"] = num_threads
+            config.pop("batch_size", None)
+            config.pop("dtype", None)
+            config.setdefault("num_threads", 4)
+            config.setdefault("distance", 1)
         else:
-            print("Configure batch size settings:")
+            config.pop("num_threads", None)
+            config.setdefault("batch_size", 16)
+            config.setdefault("dtype", "fp16")
+            config.setdefault("distance", 0.1)
 
-            default_batch_size = 16
+    elif parameter == "top_k":
+        config["top_k"] = prompt_integer(
+            "Top-K",
+            config.get("top_k", 10),
+            "top_k",
+        )
 
-            choice = input("Batch size: ").strip()
+    elif parameter == "distance":
+        default = 1 if config.get("model_id") is None else 0.1
+        config["distance"] = prompt_distance(config.get("distance", default))
 
-            batch_size = int(choice) if choice else default_batch_size
-            if batch_size < 1:
-                raise ValueError("Batch size must be a positive integer.")
+    elif parameter == "num_threads":
+        config["num_threads"] = prompt_integer(
+            "Number of threads",
+            config.get("num_threads", 4),
+            "num_threads",
+        )
 
-            print(f"Using batch size: {batch_size}")
-            config["batch_size"] = batch_size
+    elif parameter == "batch_size":
+        config["batch_size"] = prompt_integer(
+            "Batch size",
+            config.get("batch_size", 16),
+            "batch_size",
+        )
 
-            print()
+    elif parameter == "dtype":
+        config["dtype"] = prompt_dtype(config.get("dtype", "fp16"))
 
-            print("Configure dtype settings:")
+    else:
+        raise ValueError(f"Unsupported configuration parameter: {parameter}")
 
-            default_dtype = "fp16"
+    write_config(config)
 
-            choice = input("torch.dtype: ").strip()
+    print(f"Using {parameter}: {config.get(parameter)}")
+    print(f"imggrep configuration saved at {config_path()}")
 
-            dtype = choice if choice else default_dtype
-            if dtype not in ("no", "fp16", "bf16"):
-                raise ValueError("dtype must be one of: 'no', 'fp16', 'bf16'.")
 
-            print(f"Using dtype: {dtype}")
-            config["dtype"] = dtype
+def configure_interactive() -> None:
+    config = load_config()
+
+    print("Configure model settings:")
+
+    model_id = prompt_model_id(config.get("model_id"))
+    config["model_id"] = model_id
+
+    print(f"Using model_id: {model_id}")
+    print()
+
+    config["top_k"] = prompt_integer(
+        "Top-K",
+        config.get("top_k", 10),
+        "top_k",
+    )
+    print(f"Using Top-K: {config['top_k']}")
+    print()
+
+    default_distance = 1 if model_id is None else 0.1
+
+    config["distance"] = prompt_distance(config.get("distance", default_distance))
+    print(f"Using distance: {config['distance']}")
+    print()
+
+    if model_id is None:
+        config.pop("batch_size", None)
+        config.pop("dtype", None)
+
+        config["num_threads"] = prompt_integer(
+            "Number of threads",
+            config.get("num_threads", 4),
+            "num_threads",
+        )
+        print(f"Using number of threads: {config['num_threads']}")
+
+    else:
+        config.pop("num_threads", None)
+
+        config["batch_size"] = prompt_integer(
+            "Batch size",
+            config.get("batch_size", 16),
+            "batch_size",
+        )
+        print(f"Using batch size: {config['batch_size']}")
+        print()
+
+        config["dtype"] = prompt_dtype(config.get("dtype", "fp16"))
+        print(f"Using dtype: {config['dtype']}")
 
     write_config(config)
     print(f"imggrep configuration saved at {config_path()}")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(prog="imggrep config")
+    subparsers = parser.add_subparsers(dest="command")
+
+    default_parser = subparsers.add_parser(
+        "default",
+        help="Write a default configuration preset.",
+    )
+    default_parser.add_argument(
+        "preset",
+        nargs="?",
+        choices=tuple(CONFIG_PRESETS),
+        default="phash",
+        help="Configuration preset to write.",
+    )
+
+    set_parser = subparsers.add_parser(
+        "set",
+        help="Update a configuration setting.",
+    )
+    set_parser.add_argument(
+        "parameter",
+        choices=CONFIG_PARAMETERS,
+        help="Configuration parameter to update.",
+    )
+
+    return parser.parse_args(sys.argv[2:])
+
+
+def run_config() -> None:
+    args = parse_args()
+
+    if args.command is None:
+        configure_interactive()
+
+    elif args.command == "default":
+        write_default_config(args.preset)
+        print(f"imggrep configuration saved at {config_path()}")
+
+    elif args.command == "set":
+        configure_parameter(args.parameter)
