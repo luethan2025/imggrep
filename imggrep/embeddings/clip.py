@@ -22,6 +22,7 @@ class CLIPEmbedder(Embedder):
         self.processor = CLIPProcessor.from_pretrained(model_id)
 
         self.reference_embeddings: torch.Tensor | None = None
+        self.image_mode: bool = True
 
     @torch.inference_mode()
     def embed(self, value: PIL.Image.Image | str) -> torch.Tensor:
@@ -82,6 +83,7 @@ class CLIPEmbedder(Embedder):
         self,
         value: PIL.Image.Image | str,
     ) -> None:
+        self.image_mode = isinstance(value, PIL.Image.Image)
         self.reference_embeddings = self.embed(value)
 
     @torch.inference_mode()
@@ -106,7 +108,10 @@ class CLIPEmbedder(Embedder):
             dim=-1,
         )
 
-        return (1.0 - similarities).tolist()
+        if self.image_mode:
+            return (1.0 - similarities).tolist()
+
+        return similarities.tolist()
 
     @torch.inference_mode()
     def are_similar_to_reference_embeddings(
@@ -114,8 +119,13 @@ class CLIPEmbedder(Embedder):
         images: list[PIL.Image.Image],
         distance: float = 0.1,
     ) -> list[tuple[int, float]]:
-        distances = self.distance_to_reference_embeddings(images)
+        scores = self.distance_to_reference_embeddings(images)
+
+        if self.image_mode:
+            return [
+                (index, score) for index, score in enumerate(scores) if score < distance
+            ]
 
         return [
-            (index, value) for index, value in enumerate(distances) if value < distance
+            (index, score) for index, score in enumerate(scores) if score >= distance
         ]

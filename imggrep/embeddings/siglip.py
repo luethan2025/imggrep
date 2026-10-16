@@ -22,6 +22,7 @@ class SigLIPEmbedder(Embedder):
         self.processor = SiglipProcessor.from_pretrained(model_id)
 
         self.reference_embeddings: torch.Tensor | None = None
+        self.image_mode: bool = True
 
     @torch.inference_mode()
     def embed(self, value: PIL.Image.Image | str) -> torch.Tensor:
@@ -82,6 +83,7 @@ class SigLIPEmbedder(Embedder):
         self,
         value: PIL.Image.Image | str,
     ) -> None:
+        self.image_mode = isinstance(value, PIL.Image.Image)
         self.reference_embeddings = self.embed(value)
 
     @torch.inference_mode()
@@ -106,9 +108,10 @@ class SigLIPEmbedder(Embedder):
             dim=-1,
         )
 
-        distances = 1.0 - similarities
+        if self.image_mode:
+            return (1.0 - similarities).tolist()
 
-        return distances.tolist()
+        return similarities.tolist()
 
     @torch.inference_mode()
     def are_similar_to_reference_embeddings(
@@ -116,8 +119,13 @@ class SigLIPEmbedder(Embedder):
         images: list[PIL.Image.Image],
         distance: float = 0.1,
     ) -> list[tuple[int, float]]:
-        distances = self.distance_to_reference_embeddings(images)
+        scores = self.distance_to_reference_embeddings(images)
+
+        if self.image_mode:
+            return [
+                (index, score) for index, score in enumerate(scores) if score < distance
+            ]
 
         return [
-            (index, value) for index, value in enumerate(distances) if value < distance
+            (index, score) for index, score in enumerate(scores) if score >= distance
         ]
