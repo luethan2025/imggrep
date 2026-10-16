@@ -15,14 +15,11 @@ class SigLIPEmbedder(Embedder):
         self.device = get_device()
         self.dtype = dtype
 
-        self.model = SiglipModel.from_pretrained(
-            model_id,
-        )
+        self.model = SiglipModel.from_pretrained(model_id)
         self.model.to(self.device)
         self.model.eval()
-        self.processor = SiglipProcessor.from_pretrained(
-            model_id,
-        )
+
+        self.processor = SiglipProcessor.from_pretrained(model_id)
 
         self.reference_embeddings: torch.Tensor | None = None
 
@@ -38,6 +35,7 @@ class SigLIPEmbedder(Embedder):
                 padding="max_length",
                 truncation=True,
             ).to(self.device)
+
             with torch.autocast(
                 device_type=self.device.type,
                 dtype=self.dtype,
@@ -47,7 +45,8 @@ class SigLIPEmbedder(Embedder):
 
         else:
             raise TypeError(
-                f"Unable to embed image. Expected PIL.Image.Image or str, got {type(value).__name__}"
+                f"Unable to embed input. Expected PIL.Image.Image or str, "
+                f"got {type(value).__name__}"
             )
 
         embeddings = getattr(embeddings, "pooler_output", embeddings)
@@ -57,20 +56,27 @@ class SigLIPEmbedder(Embedder):
         return embeddings
 
     @torch.inference_mode()
-    def _embed_images(self, images: list[PIL.Image.Image]) -> torch.Tensor:
+    def _embed_images(
+        self,
+        images: list[PIL.Image.Image],
+    ) -> torch.Tensor:
         image_batch = self.processor(
             images=images,
             return_tensors="pt",
         )["pixel_values"].to(self.device)
+
         with torch.autocast(
             device_type=self.device.type,
             dtype=self.dtype,
             enabled=self.dtype is not None,
         ):
             embeddings = self.model.get_image_features(pixel_values=image_batch)
+
         embeddings = getattr(embeddings, "pooler_output", embeddings)
         embeddings = embeddings.float()
-        return embeddings / embeddings.norm(dim=-1, keepdim=True)
+        embeddings = embeddings / embeddings.norm(dim=-1, keepdim=True)
+
+        return embeddings
 
     def set_reference_embeddings(
         self,
@@ -81,36 +87,16 @@ class SigLIPEmbedder(Embedder):
     @torch.inference_mode()
     def distance_to_reference_embeddings(
         self,
-        value: PIL.Image.Image | str,
-        distance: float = 0.1,
-    ) -> bool:
-        if self.reference_embeddings is None:
-            raise RuntimeError(
-                "Reference embeddings have not been set. Call "
-                "`set_reference_embeddings` first."
-            )
-
-        embeddings = self.embed(value)
-
-        similarity = torch.cosine_similarity(
-            self.reference_embeddings,
-            embeddings,
-            dim=-1,
-        ).item()
-
-        return (1.0 - similarity) < distance
-
-    @torch.inference_mode()
-    def are_similar_to_reference_embeddings(
-        self,
         images: list[PIL.Image.Image],
-        distance: float = 0.1,
-    ) -> list[bool]:
+    ) -> list[float]:
         if self.reference_embeddings is None:
             raise RuntimeError(
                 "Reference embeddings have not been set. Call "
                 "`set_reference_embeddings` first."
             )
+
+        if not images:
+            return []
 
         embeddings = self._embed_images(images)
 
@@ -120,4 +106,18 @@ class SigLIPEmbedder(Embedder):
             dim=-1,
         )
 
-        return [(1.0 - similarity) < distance for similarity in similarities.tolist()]
+        distances = 1.0 - similarities
+
+        return distances.tolist()
+
+    @torch.inference_mode()
+    def are_similar_to_reference_embeddings(
+        self,
+        images: list[PIL.Image.Image],
+        distance: float = 0.1,
+    ) -> list[tuple[int, float]]:
+        distances = self.distance_to_reference_embeddings(images)
+
+        return [
+            (index, value) for index, value in enumerate(distances) if value < distance
+        ]

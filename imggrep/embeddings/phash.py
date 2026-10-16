@@ -36,7 +36,7 @@ class pHashEmbedder(Embedder):
     def distance_to_reference_embeddings(
         self,
         img: PIL.Image.Image,
-    ) -> bool:
+    ) -> float:
         if self.reference_embeddings is None:
             raise RuntimeError(
                 "Reference embeddings have not been set. Call `set_reference_embeddings` before calling `is_similar_to_reference_embeddings`."
@@ -49,7 +49,7 @@ class pHashEmbedder(Embedder):
         self,
         images: list[PIL.Image.Image],
         distance: int = 10,
-    ) -> list[tuple[int, int]]:
+    ) -> list[tuple[int, float]]:
         def calculate_distance(
             item: tuple[int, PIL.Image.Image],
         ) -> tuple[int, int] | None:
