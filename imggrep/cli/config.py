@@ -172,7 +172,7 @@ def prompt_integer(
 
 
 def prompt_distance(current: float) -> int | float:
-    choice = input(f"Distance: ").strip()
+    choice = input("Distance: ").strip()
 
     try:
         value = float(choice) if choice else current
@@ -196,7 +196,7 @@ def prompt_model_id(current_model: str | None) -> str | None:
         "1",
     )
 
-    choice = input(f"Your choice: ").strip()
+    choice = input("Your choice: ").strip()
     choice = choice or current_choice
 
     if choice not in SUPPORTED_MODELS:
@@ -206,7 +206,7 @@ def prompt_model_id(current_model: str | None) -> str | None:
 
 
 def prompt_dtype(current: str = "fp16") -> str:
-    choice = input(f"torch.dtype: ").strip()
+    choice = input("torch.dtype: ").strip()
     value = choice or current
 
     if value not in SUPPORTED_DTYPES:
